@@ -15,9 +15,8 @@ fn render_to_svg(source: &str) -> Result<String, String> {
     let opts = mermaid_rs_renderer::RenderOptions::default();
 
     // Wrap in catch_unwind — the renderer can panic on malformed input
-    let result = std::panic::catch_unwind(|| {
-        mermaid_rs_renderer::render_with_options(source, opts)
-    });
+    let result =
+        std::panic::catch_unwind(|| mermaid_rs_renderer::render_with_options(source, opts));
 
     match result {
         Ok(Ok(svg)) => Ok(fix_svg_font_families(&svg)),
@@ -135,7 +134,11 @@ mod tests {
     fn test_flowchart_keyword() {
         let source = "flowchart TD\n    A[Start] --> B{Decision?}\n    B -->|Yes| C[Ok]\n    B -->|No| D[Fix]";
         let result = render_mermaid_to_image(source, 800);
-        assert!(result.is_ok(), "flowchart keyword failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "flowchart keyword failed: {:?}",
+            result.err()
+        );
         let img = result.unwrap();
         assert!(img.width() == 800);
         assert!(img.height() > 100);
