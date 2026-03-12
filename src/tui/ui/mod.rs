@@ -634,10 +634,10 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
 
     let selected_code_id = if app.mode == crate::tui::app::AppMode::Interactive {
         app.interactive_state.current_element().and_then(|elem| {
-            if let ElementType::CodeBlock { language, .. } = &elem.element_type {
-                if language.as_deref() == Some("mermaid") {
-                    return Some(elem.id);
-                }
+            if let ElementType::CodeBlock { language, .. } = &elem.element_type
+                && language.as_deref() == Some("mermaid")
+            {
+                return Some(elem.id);
             }
             None
         })
@@ -654,10 +654,9 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
             if let ElementType::CodeBlock {
                 language, content, ..
             } = &elem.element_type
+                && language.as_deref() == Some("mermaid")
             {
-                if language.as_deref() == Some("mermaid") {
-                    return Some((elem.id, elem.line_range, content.clone()));
-                }
+                return Some((elem.id, elem.line_range, content.clone()));
             }
             None
         })

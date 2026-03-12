@@ -710,10 +710,10 @@ impl App {
         }
 
         // iTerm2 / WezTerm inline images protocol
-        if let Ok(term_program) = std::env::var("TERM_PROGRAM") {
-            if term_program == "iTerm.app" || term_program == "WezTerm" {
-                return Some(ProtocolType::Iterm2);
-            }
+        if let Ok(term_program) = std::env::var("TERM_PROGRAM")
+            && (term_program == "iTerm.app" || term_program == "WezTerm")
+        {
+            return Some(ProtocolType::Iterm2);
         }
 
         // Ghostty uses Kitty protocol

@@ -101,11 +101,11 @@ impl FileWatcher {
         }
 
         // Check if debounce window has elapsed
-        if let Some(start) = self.debounce_start {
-            if start.elapsed() >= self.debounce_duration {
-                self.debounce_start = None;
-                return true;
-            }
+        if let Some(start) = self.debounce_start
+            && start.elapsed() >= self.debounce_duration
+        {
+            self.debounce_start = None;
+            return true;
         }
 
         false
