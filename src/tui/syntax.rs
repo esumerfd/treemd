@@ -7,6 +7,8 @@ use syntect::highlighting::{Theme, ThemeSet};
 use syntect::parsing::SyntaxSet;
 use syntect::util::LinesWithEndings;
 
+const DEFAULT_CODE_THEME: &str = "base16-ocean.dark";
+
 pub struct SyntaxHighlighter {
     syntax_set: SyntaxSet,
     theme: Theme,
@@ -16,15 +18,37 @@ impl SyntaxHighlighter {
     pub fn new(theme: &str, theme_dir: Option<PathBuf>) -> Self {
         let syntax_set = SyntaxSet::load_defaults_newlines();
         let mut theme_set = ThemeSet::load_defaults();
-        if let Some(dir) = theme_dir {
-            // Load the user themes if any (silently ignore errors)
-            let _ = theme_set.add_from_folder(dir);
+        if let Some(dir) = theme_dir
+            && let Ok(paths) = ThemeSet::discover_theme_paths(dir)
+        {
+            for path in paths {
+                match ThemeSet::get_theme(&path) {
+                    Ok(theme) => {
+                        if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
+                            theme_set.themes.insert(name.to_owned(), theme);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("warning: skipping theme {}: {}", path.display(), e);
+                    }
+                }
+            }
         }
 
-        let theme = theme_set.themes.get(theme).cloned().unwrap_or_else(|| {
-            // Fallback to the first theme (we know there is one since `load_defaults was used`)
-            theme_set.themes.first_entry().unwrap().get().clone()
-        });
+        let theme = theme_set
+            .themes
+            .get(theme)
+            .or_else(|| {
+                if theme != DEFAULT_CODE_THEME {
+                    eprintln!(
+                        "warning: code theme '{}' not found, using '{}'",
+                        theme, DEFAULT_CODE_THEME
+                    );
+                }
+                theme_set.themes.get(DEFAULT_CODE_THEME)
+            })
+            .cloned()
+            .expect("syntect default themes must contain base16-ocean.dark");
 
         Self { syntax_set, theme }
     }
