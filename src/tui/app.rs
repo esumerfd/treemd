@@ -505,7 +505,7 @@ impl App {
 
         // Load sublime color scheme directory
         let code_theme_dir = config.code_theme_dir_path();
-        // Load sublime color scheme name (for code higlighting)
+        // Load sublime color scheme name (for code highlighting)
         let code_theme = config.ui.code_theme.as_str();
 
         // Load outline width from config

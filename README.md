@@ -489,7 +489,7 @@ code_theme = "base16-ocean.dark"  # Default theme
 
 **Using custom themes:**
 
-1. Create the `code-themes` directory next to your `config.toml file`
+1. Create the `code-themes` directory next to your `config.toml` file
 
 2. Add your `.tmTheme` files to the directory
 
