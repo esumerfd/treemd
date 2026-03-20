@@ -56,7 +56,7 @@ image = "0.25"
 gif = "0.14"
 
 # Syntax highlighting
-syntect = "5.3"
+syntect = { version = "5.3", default-features = false, features = ["default-syntaxes", "default-themes", "plist-load", "regex-onig"] }
 
 # Fuzzy search
 nucleo-matcher = "0.3"
