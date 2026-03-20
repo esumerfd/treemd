@@ -1792,7 +1792,9 @@ impl App {
     /// Maximum scroll offset: stops when last line is at bottom of viewport
     pub fn max_content_scroll(&self) -> u16 {
         let viewport = self.content_viewport_height as usize;
-        self.content_height.saturating_sub(viewport).min(u16::MAX as usize) as u16
+        self.content_height
+            .saturating_sub(viewport)
+            .min(u16::MAX as usize) as u16
     }
 
     /// Scroll content down by one line
@@ -2422,9 +2424,7 @@ impl App {
             // Scroll to bring match line into view (center it if possible)
             let half_viewport = self.content_viewport_height / 2;
             self.content_scroll = match_line.saturating_sub(half_viewport);
-            self.content_scroll = self
-                .content_scroll
-                .min(self.max_content_scroll());
+            self.content_scroll = self.content_scroll.min(self.max_content_scroll());
             self.content_scroll_state = self
                 .content_scroll_state
                 .position(self.content_scroll as usize);
@@ -5037,8 +5037,8 @@ impl App {
                     .and_then(|text| self.document.find_heading(text))
                     .map(|h| h.offset)
                     .unwrap_or(0);
-                let content_before_section = &self.document.content
-                    [..section_start.min(self.document.content.len())];
+                let content_before_section =
+                    &self.document.content[..section_start.min(self.document.content.len())];
 
                 // Count tables (groups of | lines) before section
                 let mut table_count_before = 0;
