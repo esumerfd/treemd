@@ -22,7 +22,11 @@ run-release FILE="README.md":
 
 # Run with the link following test file
 run-links:
-    cargo run -- test_links.md
+    cargo run -- tests/docs/test_links.md
+
+# Run with the backtick rendering test file
+run-backticks:
+    cargo run -- tests/docs/test_backticks.md
 
 # Run all tests
 test:

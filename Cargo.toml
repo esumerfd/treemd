@@ -101,6 +101,9 @@ default = ["unstable-dynamic", "mermaid"]
 unstable-dynamic = ["clap_complete/unstable-dynamic"]
 mermaid = ["dep:mermaid-rs-renderer", "dep:resvg"]
 
+[patch.crates-io]
+turbovault-parser = { path = "crates/turbovault-parser" }
+
 [profile.release]
 # Enable Link Time Optimization for better performance and smaller binary
 lto = true

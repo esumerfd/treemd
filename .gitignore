@@ -28,3 +28,8 @@ assets/raw/
 *.md
 !README.md
 !CHANGELOG.md
+!tests/docs/*.md
+!code-changes.md
+
+# Upstream patch files (attach to issue tickets, not committed here)
+*.patch
