@@ -520,6 +520,11 @@ fn process_event(event: Event, state: &mut BlockParserState, blocks: &mut Vec<Co
                 state.blockquote_buffer.push('`');
                 state.blockquote_buffer.push_str(&text);
                 state.blockquote_buffer.push('`');
+            } else if state.in_table {
+                // Re-emit with delimiters so table cell strings carry inline code markers
+                state.paragraph_buffer.push('`');
+                state.paragraph_buffer.push_str(&text);
+                state.paragraph_buffer.push('`');
             } else {
                 state.in_code_inline = true;
                 state.add_inline_text(&text);

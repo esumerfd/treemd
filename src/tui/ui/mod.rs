@@ -2513,7 +2513,7 @@ fn render_inline_elements(
     spans
 }
 
-fn format_inline_markdown<'a>(text: &str, theme: &Theme) -> Vec<Span<'a>> {
+pub(crate) fn format_inline_markdown<'a>(text: &str, theme: &Theme) -> Vec<Span<'a>> {
     let mut spans = Vec::new();
     let mut current = String::new();
     let chars: Vec<char> = text.chars().collect();

@@ -29,17 +29,23 @@ Vendored fix active in `crates/turbovault-parser` via `[patch.crates-io]` in `Ca
 
 ---
 
-## Open bugs
+## turbovault-parser
 
 ### Bug: Inline code in table cells and headers not rendered correctly
 
 **Issue:** [#51 Backticks not rendered correctly](https://github.com/Epistates/treemd/issues/51)
 
-**Root cause:** `ContentBlock::Table` stores cells as `Vec<String>` (no `InlineElement`
-support). Inline code formatting is silently dropped when table cells are accumulated.
+**Root cause:** `ContentBlock::Table` stores cells as `Vec<String>`. When `Event::Code`
+fired inside a table, it fell through to the default branch writing to `paragraph_buffer`
+without backtick delimiters, so inline code formatting was silently dropped.
 
-**Fix required:**
-1. Change table cell types in turbovault-parser to `Vec<InlineElement>` per cell
-2. Update treemd's `table.rs` renderer to use inline elements instead of plain strings
+**Fix:**
+1. Added `else if state.in_table` branch to `Event::Code` in `blocks.rs` to re-emit
+   backtick delimiters into `paragraph_buffer` (same approach as blockquote fix).
+2. Updated `src/tui/ui/table.rs` `render_table_row()` to call `format_inline_markdown()`
+   on cells containing backticks, producing styled spans instead of a single plain span.
 
-**Status:** Not yet fixed.
+**Patch file:** `turbovault-parser-table-inline-code.patch`
+
+**Status:** Patch generated, pending application and publish of turbovault-parser 1.2.8.
+Vendored fix active in `crates/turbovault-parser` via `[patch.crates-io]` in `Cargo.toml`.
