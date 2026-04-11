@@ -390,11 +390,12 @@ pub fn render_table_row(
                 }
                 for span in formatted {
                     // Plain text spans: apply row/header style; styled spans (code etc.) keep their style
-                    if span.style == ratatui::style::Style::default() {
-                        spans.push(Span::styled(span.content.into_owned(), style));
+                    let effective_style = if span.style == ratatui::style::Style::default() {
+                        style
                     } else {
-                        spans.push(Span::styled(span.content.into_owned(), span.style));
-                    }
+                        span.style
+                    };
+                    spans.push(Span::styled(span.content.into_owned(), effective_style));
                 }
                 if trail > 0 {
                     spans.push(Span::styled(" ".repeat(trail), style));
