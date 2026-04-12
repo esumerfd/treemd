@@ -24,6 +24,10 @@ use table::render_table;
 use util::{detect_checkbox_in_text, filter_content};
 
 pub fn render(frame: &mut Frame, app: &mut App) {
+    // Re-index interactive elements if mermaid image dimensions arrived last frame.
+    #[cfg(feature = "mermaid")]
+    app.reindex_mermaid_if_needed();
+
     // Update content metrics before rendering to ensure content height and scroll are correct
     app.update_content_metrics();
 
@@ -406,6 +410,11 @@ fn render_content(frame: &mut Frame, app: &mut App, area: Rect) {
         // Calculate available width for tables (content area minus borders and padding)
         let content_width = area.width.saturating_sub(2); // 2 for left/right borders
 
+        #[cfg(feature = "mermaid")]
+        let mermaid_rows_ref = &app.mermaid_placeholder_rows;
+        #[cfg(not(feature = "mermaid"))]
+        let mermaid_rows_ref = &std::collections::HashMap::new();
+
         render_markdown_enhanced(
             &content_text,
             &app.highlighter,
@@ -413,6 +422,7 @@ fn render_content(frame: &mut Frame, app: &mut App, area: Rect) {
             selected_element_id,
             Some(&interactive_state), // Pass cloned copy to release borrow
             Some(content_width),
+            mermaid_rows_ref,
         )
     };
 
@@ -704,11 +714,16 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
             continue;
         }
 
-        // Dynamic max height from source content.
+        // Dynamic max height: use pixel-accurate rows once the image has been rendered,
+        // fall back to the source-line heuristic on first load.
         // `stable_height` is constant during scrolling (used for centering so the
         // x-position doesn't jitter on every frame).  `image_height` clips to what
         // actually fits in the viewport right now.
-        let max_image_height = mermaid_placeholder_lines(source) as u16;
+        let max_image_height = {
+            let hash = MermaidApp::mermaid_source_hash(source);
+            app.mermaid_placeholder_rows.get(&hash).copied()
+                .unwrap_or_else(|| mermaid_placeholder_lines(source))
+        } as u16;
         let stable_height = max_image_height.min(inner.height);
         let image_height = available_height.min(max_image_height);
         let hash = MermaidApp::mermaid_source_hash(source);
@@ -1475,6 +1490,7 @@ fn render_markdown_enhanced(
     selected_element_id: Option<crate::tui::interactive::ElementId>,
     interactive_state: Option<&crate::tui::interactive::InteractiveState>,
     available_width: Option<u16>,
+    mermaid_placeholder_rows: &std::collections::HashMap<u64, usize>,
 ) -> Text<'static> {
     let mut lines = Vec::new();
 
@@ -1592,9 +1608,17 @@ fn render_markdown_enhanced(
                     header_spans.push(Span::styled("▸ mermaid diagram", theme.code_fence_style()));
                     lines.push(Line::from(header_spans));
 
-                    // Reserve blank lines for the image overlay (dynamic per diagram size)
+                    // Reserve blank lines for the image overlay.
+                    // Use pixel-accurate row count once the image has been rendered;
+                    // fall back to the source-line heuristic on first load.
+                    use crate::tui::app::App as MermaidApp;
                     use crate::tui::interactive::mermaid_placeholder_lines;
-                    for _ in 0..mermaid_placeholder_lines(content) {
+                    let placeholder_rows = {
+                        let hash = MermaidApp::mermaid_source_hash(content);
+                        mermaid_placeholder_rows.get(&hash).copied()
+                            .unwrap_or_else(|| mermaid_placeholder_lines(content))
+                    };
+                    for _ in 0..placeholder_rows {
                         lines.push(Line::from(vec![]));
                     }
                 } else {
