@@ -39,8 +39,46 @@ pub const BLOCK_IMAGE_TOTAL_LINES: usize = 1 + IMAGE_PLACEHOLDER_LINES; // 17
 pub const PARAGRAPH_IMAGE_PLACEHOLDER_LINES: usize = 13;
 pub const PARAGRAPH_WITH_IMAGE_TOTAL_LINES: usize = 1 + PARAGRAPH_IMAGE_PLACEHOLDER_LINES; // 14
 
-/// Placeholder lines reserved for mermaid diagram rendering.
-pub const MERMAID_PLACEHOLDER_LINES: usize = 22;
+/// Estimate placeholder lines for a mermaid diagram based on its source content.
+///
+/// Counts significant lines (nodes, edges, labels) and multiplies by a per-line
+/// row estimate. Clamped to a sensible min/max so simple diagrams don't waste
+/// space and very complex ones still fit.
+pub fn mermaid_placeholder_lines(source: &str) -> usize {
+    let node_lines = source
+        .lines()
+        .filter(|l| {
+            let t = l.trim();
+            if t.is_empty() || t.starts_with("%%") {
+                return false;
+            }
+            let first = t.split_whitespace().next().unwrap_or("");
+            !matches!(
+                first,
+                "graph"
+                    | "flowchart"
+                    | "sequenceDiagram"
+                    | "classDiagram"
+                    | "stateDiagram"
+                    | "stateDiagram-v2"
+                    | "gantt"
+                    | "pie"
+                    | "gitGraph"
+                    | "erDiagram"
+                    | "journey"
+                    | "mindmap"
+                    | "timeline"
+                    | "xychart-beta"
+                    | "block-beta"
+                    | "packet-beta"
+                    | "sankey-beta"
+                    | "quadrantChart"
+            )
+        })
+        .count();
+    // ~5 terminal rows per meaningful source line; min 25, max 120
+    (node_lines * 5).max(25).min(120)
+}
 
 // Sub-index encoding constants for nested elements within details blocks
 /// Base offset for elements nested inside details blocks
@@ -249,7 +287,7 @@ impl InteractiveState {
 
                                     #[cfg(feature = "mermaid")]
                                     let code_lines = if language.as_deref() == Some("mermaid") {
-                                        1 + MERMAID_PLACEHOLDER_LINES
+                                        1 + mermaid_placeholder_lines(content)
                                     } else {
                                         2 + content.lines().count()
                                     };
@@ -533,7 +571,7 @@ impl InteractiveState {
 
                                     #[cfg(feature = "mermaid")]
                                     let lines = if language.as_deref() == Some("mermaid") {
-                                        1 + MERMAID_PLACEHOLDER_LINES
+                                        1 + mermaid_placeholder_lines(content)
                                     } else {
                                         2 + content.lines().count()
                                     };
@@ -616,7 +654,7 @@ impl InteractiveState {
                     // Mermaid blocks use placeholder lines; regular code uses fences + content
                     #[cfg(feature = "mermaid")]
                     let lines = if language.as_deref() == Some("mermaid") {
-                        1 + MERMAID_PLACEHOLDER_LINES // header + blank lines
+                        1 + mermaid_placeholder_lines(content) // header + blank lines
                     } else {
                         2 + content.lines().count() // +2 for fences
                     };
@@ -1174,7 +1212,7 @@ fn count_single_block_lines(block: &Block) -> usize {
         } => {
             #[cfg(feature = "mermaid")]
             if language.as_deref() == Some("mermaid") {
-                return 1 + MERMAID_PLACEHOLDER_LINES;
+                return 1 + mermaid_placeholder_lines(content);
             }
             let _ = language;
             2 + content.lines().count()

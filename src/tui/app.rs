@@ -438,6 +438,9 @@ pub struct App {
     pub mermaid_render_errors: HashMap<u64, String>,
     #[cfg(feature = "mermaid")]
     pub mermaid_last_render_width: u32,
+    /// Pixel dimensions (width, height) of each rendered mermaid image, keyed by source hash.
+    #[cfg(feature = "mermaid")]
+    pub mermaid_image_dims: HashMap<u64, (u32, u32)>,
 
     // LaTeX detection state
     pub latex_detected: bool,
@@ -665,6 +668,8 @@ impl App {
             mermaid_render_errors: HashMap::new(),
             #[cfg(feature = "mermaid")]
             mermaid_last_render_width: 0,
+            #[cfg(feature = "mermaid")]
+            mermaid_image_dims: HashMap::new(),
 
             // LaTeX detection
             latex_detected: false,
@@ -820,6 +825,7 @@ impl App {
         if target_px != self.mermaid_last_render_width {
             self.mermaid_protocol_cache.clear();
             self.mermaid_render_errors.clear();
+            self.mermaid_image_dims.clear();
             self.mermaid_last_render_width = target_px;
         }
 
@@ -832,9 +838,11 @@ impl App {
         }
         match crate::tui::mermaid::render_mermaid_to_image(source, target_px) {
             Ok(img) => {
+                let dims = (img.width(), img.height());
                 if let Some(picker) = self.picker.as_mut() {
                     let protocol = picker.new_resize_protocol(img);
                     self.mermaid_protocol_cache.insert(hash, protocol);
+                    self.mermaid_image_dims.insert(hash, dims);
                     return true;
                 }
                 false

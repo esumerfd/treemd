@@ -614,7 +614,7 @@ fn render_inline_images(frame: &mut Frame, app: &mut App, area: Rect) {
 #[cfg(feature = "mermaid")]
 fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
     use crate::tui::app::App as MermaidApp;
-    use crate::tui::interactive::{ElementType, MERMAID_PLACEHOLDER_LINES};
+    use crate::tui::interactive::{ElementType, mermaid_placeholder_lines};
     use ratatui_image::{Resize, StatefulImage};
 
     if app.viewing_image_path.is_some() || !app.images_enabled {
@@ -627,10 +627,17 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
         horizontal: 1,
     });
 
-    // Use 80% of content width for image display
-    let image_width = ((inner.width as usize * 80) / 100).max(20) as u16;
-    // Use the full placeholder height
-    let max_image_height = MERMAID_PLACEHOLDER_LINES as u16;
+    // Use full content width for mermaid diagrams (block-level elements)
+    let image_width = inner.width.max(20);
+
+    // Font cell size in pixels, used for centering calculations
+    let font_size = app
+        .picker
+        .as_ref()
+        .map_or((8u32, 16u32), |p| {
+            let (fw, fh) = p.font_size();
+            (fw as u32, fh as u32)
+        });
 
     let selected_code_id = if app.mode == crate::tui::app::AppMode::Interactive {
         app.interactive_state.current_element().and_then(|elem| {
@@ -680,12 +687,13 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
         // Trigger rendering (caches on first call)
         let rendered = app.render_mermaid_if_needed(source, image_width);
 
-        let y_offset = if line_start >= scroll {
-            (line_start - scroll) as u16
-        } else {
-            0
-        };
+        // Skip when diagram top has scrolled above the viewport — let it scroll off
+        // naturally instead of pinning at y=0 and overlapping other content.
+        if line_start < scroll {
+            continue;
+        }
 
+        let y_offset = (line_start - scroll) as u16;
         let image_y = inner.y + y_offset;
         if image_y >= inner.bottom() {
             continue;
@@ -696,6 +704,12 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
             continue;
         }
 
+        // Dynamic max height from source content.
+        // `stable_height` is constant during scrolling (used for centering so the
+        // x-position doesn't jitter on every frame).  `image_height` clips to what
+        // actually fits in the viewport right now.
+        let max_image_height = mermaid_placeholder_lines(source) as u16;
+        let stable_height = max_image_height.min(inner.height);
         let image_height = available_height.min(max_image_height);
         let hash = MermaidApp::mermaid_source_hash(source);
 
@@ -703,10 +717,36 @@ fn render_mermaid_images(frame: &mut Frame, app: &mut App, area: Rect) {
             if let Some(protocol_state) = app.mermaid_protocol_cache.get_mut(&hash) {
                 let is_selected = selected_code_id == Some(*elem_id);
 
+                // Compute the natural displayed size in terminal cells to enable centering.
+                // Resize::Scale uses fit_area_proportionally: ratio = min(avail_w/img_w, avail_h/img_h).
+                let (centered_x, centered_width) =
+                    if let Some(&(img_w, img_h)) = app.mermaid_image_dims.get(&hash) {
+                        if img_w > 0 && img_h > 0 {
+                            let avail_w_px = inner.width as u32 * font_size.0;
+                            // Use stable_height (constant during scroll) so centering x
+                            // doesn't jitter on every frame as the image enters the viewport.
+                            let avail_h_px = stable_height as u32 * font_size.1;
+                            let w_ratio = avail_w_px as f64 / img_w as f64;
+                            let h_ratio = avail_h_px as f64 / img_h as f64;
+                            let ratio = w_ratio.min(h_ratio);
+                            let disp_w_px = (img_w as f64 * ratio).round() as u32;
+                            // Round up to cell boundary
+                            let disp_w_cols =
+                                ((disp_w_px + font_size.0 - 1) / font_size.0) as u16;
+                            let disp_w_cols = disp_w_cols.min(inner.width);
+                            let x_offset = (inner.width.saturating_sub(disp_w_cols)) / 2;
+                            (inner.x + x_offset, disp_w_cols)
+                        } else {
+                            (inner.x, image_width.min(inner.width))
+                        }
+                    } else {
+                        (inner.x, image_width.min(inner.width))
+                    };
+
                 let image_area = Rect {
-                    x: inner.x,
+                    x: centered_x,
                     y: image_y,
-                    width: image_width.min(inner.width),
+                    width: centered_width,
                     height: image_height,
                 };
 
@@ -1552,9 +1592,9 @@ fn render_markdown_enhanced(
                     header_spans.push(Span::styled("▸ mermaid diagram", theme.code_fence_style()));
                     lines.push(Line::from(header_spans));
 
-                    // Reserve blank lines for the image overlay
-                    use crate::tui::interactive::MERMAID_PLACEHOLDER_LINES;
-                    for _ in 0..MERMAID_PLACEHOLDER_LINES {
+                    // Reserve blank lines for the image overlay (dynamic per diagram size)
+                    use crate::tui::interactive::mermaid_placeholder_lines;
+                    for _ in 0..mermaid_placeholder_lines(content) {
                         lines.push(Line::from(vec![]));
                     }
                 } else {
