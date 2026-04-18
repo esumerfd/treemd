@@ -255,7 +255,6 @@ Also [[Another Valid]]
     }
 
     #[test]
-    #[ignore = "requires turbovault-parser fix (Epistates/turbovault#15) to be merged and published"]
     fn test_heading_inline_code_not_leaked_to_paragraph() {
         // Regression test for: inline code in headings was leaking into the
         // next paragraph's content and inline element buffer.
